@@ -34,8 +34,10 @@ const packageJson = JSON.parse(packageJsonString);
 
 /** modifying package.json and saving to 'dist' */
 const distPackageJson = structuredClone(packageJson);
-distPackageJson.main = 'index.js';
-delete distPackageJson.private;
+distPackageJson.main = './cjs/index.js';
+distPackageJson.module = './esm/index.js';
+distPackageJson.types = './esm/index.d.ts';
+distPackageJson.exports = { '.': { import: './esm/index.js', require: './cjs/index.js' } };
 delete distPackageJson.scripts;
 delete distPackageJson.devDependencies;
 
@@ -46,12 +48,26 @@ fs.writeFileSync(`${distDir}/package.json`, distPackageJsonString);
 fs.copyFileSync(`${rootDir}/README.md`, `${distDir}/README.md`);
 fs.copyFileSync(`${rootDir}/LICENSE`, `${distDir}/LICENSE`);
 
-/** Building typescript files */
-const tsc = ['tsc', '--outDir', distDir, '--project', 'tsconfig.build.json'];
-const tscAlias = ['tsc-alias', '--outDir', distDir, '--project', 'tsconfig.build.json'];
-let result = spawnSync('bunx', tsc, { cwd: rootDir, stdio: 'inherit' });
-if (result.status === 0) result = spawnSync('bunx', tscAlias, { cwd: rootDir, stdio: 'inherit' });
-if (result.status !== 0) error('Build failed');
+{
+  /** Building ESM */
+  const esmDir = path.join(distDir, 'esm');
+  const tsc = ['tsc', '--outDir', esmDir, '--project', 'tsconfig.build.json'];
+  const tscAlias = ['tsc-alias', '--outDir', esmDir, '--project', 'tsconfig.build.json'];
+  let result = spawnSync('bunx', tsc, { cwd: rootDir, stdio: 'inherit' });
+  if (result.status === 0) result = spawnSync('bunx', tscAlias, { cwd: rootDir, stdio: 'inherit' });
+  if (result.status !== 0) error('ESM Build failed');
+}
+
+{
+  /** Building CJS */
+  const cjsDir = path.join(distDir, 'cjs');
+  const tsc = ['tsc', '--outDir', cjsDir, '--module', 'CommonJS', '--project', 'tsconfig.build.json'];
+  const tscAlias = ['tsc-alias', '--outDir', cjsDir, '--project', 'tsconfig.build.json'];
+  let result = spawnSync('bunx', tsc, { cwd: rootDir, stdio: 'inherit' });
+  if (result.status === 0) result = spawnSync('bunx', tscAlias, { cwd: rootDir, stdio: 'inherit' });
+  if (result.status !== 0) error('CJS Build failed');
+  fs.writeFileSync(`${cjsDir}/package.json`, JSON.stringify({ type: 'commonjs' }));
+}
 
 /** Removing temporary files */
 const tsbuildinfo = path.join(distDir, 'tsconfig.build.tsbuildinfo');

@@ -3,7 +3,6 @@
   "type": "module",
   "version": "0.0.0",
   "description": "description",
-  "main": "src/index.ts",
   "scripts": {
     "prepare": "husky",
     "clean": "rm -rf dist logs CHANGELOG.md",
