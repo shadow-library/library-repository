@@ -1,2 +1,4 @@
 [test]
 coverageThreshold = 0.9
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = "e2e"
